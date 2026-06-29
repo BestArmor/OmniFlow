@@ -2,6 +2,7 @@ using System;
 using System.Buffers;
 using System.IO;
 using System.Text;
+using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 using OmniFlow.Models;
@@ -23,32 +24,18 @@ public sealed class MemoryMappedLogWatcher : ILogWatcher
         _cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
         var token = _cts.Token;
 
-        // Открываем с FileShare.ReadWrite, чтобы не блокировать логгеры, которые пишут в этот файл
         using var fs = new FileStream(filePath, FileMode.Open, FileAccess.Read, FileShare.ReadWrite | FileShare.Delete);
-        
-        // Буфер 4 КБ. Аллоцируем один раз!
         byte[] buffer = ArrayPool<byte>.Shared.Rent(4096);
         int bytesInBuffer = 0;
 
         try
         {
-            // Сначала дочитываем существующий файл до конца
-            while (!token.IsCancellationRequested)
-            {
-                int bytesRead = await fs.ReadAsync(buffer.AsMemory(bytesInBuffer), token);
-                if (bytesRead == 0) break; // Достигнут конец файла
-
-                bytesInBuffer += bytesRead;
-                ProcessBuffer(buffer, ref bytesInBuffer, filePath, token);
-            }
-
-            // Режим tail -f: ждём появления новых данных
             while (!token.IsCancellationRequested)
             {
                 int bytesRead = await fs.ReadAsync(buffer.AsMemory(bytesInBuffer), token);
                 if (bytesRead == 0)
                 {
-                    await Task.Delay(500, token); // Спим, чтобы не жрать CPU
+                    await Task.Delay(500, token);
                     continue;
                 }
 
@@ -64,41 +51,102 @@ public sealed class MemoryMappedLogWatcher : ILogWatcher
 
     private void ProcessBuffer(byte[] buffer, ref int bytesInBuffer, string sourceFile, CancellationToken token)
     {
-        // Ищем переносы строк в буфере
         Span<byte> span = buffer.AsSpan(0, bytesInBuffer);
         
         while (!token.IsCancellationRequested)
         {
             int newlineIndex = span.IndexOf((byte)'\n');
-            if (newlineIndex < 0) break; // Полных строк больше нет
+            if (newlineIndex < 0) break;
 
-            // Вырезаем строку без \n и \r
             var lineSpan = span.Slice(0, newlineIndex);
             if (lineSpan.Length > 0 && lineSpan[^1] == (byte)'\r')
             {
                 lineSpan = lineSpan[..^1];
             }
 
-            // Декодируем в строку (здесь происходит аллокация, но только для готовой строки)
-            string line = Encoding.UTF8.GetString(lineSpan);
-            
-            // Парсим и пушим в канал
-            var entry = ParseLogEntry(line, sourceFile);
+            var entry = ParseLogEntry(lineSpan, sourceFile);
             _channel.Writer.TryWrite(entry);
 
-            // Сдвигаем буфер: удаляем обработанную строку, оставляем остаток
             span = span[(newlineIndex + 1)..];
             bytesInBuffer = span.Length;
-            
-            // Копируем остаток в начало буфера
             span.CopyTo(buffer.AsSpan());
         }
     }
 
-    // Простейший парсер. В реальности тут могут быть регулярки, но мы делаем быстро
-    private static LogEntry ParseLogEntry(string line, string sourceFile)
+    private static LogEntry ParseLogEntry(ReadOnlySpan<byte> lineSpan, string sourceFile)
     {
-        // Предполагаем формат: [2023-10-25 12:00:00] [INFO] Message
+        string fileName = Path.GetFileName(sourceFile);
+
+        // Если строка начинается с { — это JSON (Serilog/Structured log)
+        if (lineSpan.Length > 0 && lineSpan[0] == (byte)'{')
+        {
+            return ParseJsonLog(lineSpan, fileName);
+        }
+
+        // Обычный текстовый лог
+        string line = Encoding.UTF8.GetString(lineSpan);
+        return ParseTextLog(line, fileName);
+    }
+
+    private static LogEntry ParseJsonLog(ReadOnlySpan<byte> jsonSpan, string fileName)
+    {
+        var reader = new Utf8JsonReader(jsonSpan);
+        DateTime timestamp = DateTime.Now;
+        string level = "INFO";
+        string message = "";
+        var props = new StringBuilder();
+
+        try
+        {
+            while (reader.Read())
+            {
+                if (reader.TokenType == JsonTokenType.PropertyName)
+                {
+                    var propName = reader.GetString();
+                    reader.Read();
+
+                    switch (propName)
+                    {
+                        case "@t":
+                        case "timestamp":
+                            DateTime.TryParse(reader.GetString(), out timestamp);
+                            break;
+                        case "@l":
+                        case "level":
+                            string rawLevel = reader.GetString() ?? "INFO";
+                            // Маппим все возможные варианты в наши стандартные
+                            level = rawLevel.ToLower() switch
+                            {
+                                "error" or "err" or "fatal" or "critical" => "ERROR",
+                                "warning" or "warn" => "WARN",
+                                _ => "INFO"
+                            };
+                            break;
+                        case "@mt":
+                        case "message":
+                            message = reader.GetString() ?? "";
+                            break;
+                        default:
+                            // Безопасно читаем любые значения (строки, числа, булы) без крашей
+                            string val = reader.TokenType == JsonTokenType.String 
+                                ? reader.GetString() ?? "" 
+                                : Encoding.UTF8.GetString(reader.ValueSpan);
+                            props.Append($"{propName}={val} ");
+                            break;
+                    }
+                }
+            }
+        }
+        catch
+        {
+            return new LogEntry(DateTime.Now, "INFO", Encoding.UTF8.GetString(jsonSpan), fileName, "");
+        }
+
+        return new LogEntry(timestamp, level, message, fileName, props.ToString().Trim());
+    }
+
+    private static LogEntry ParseTextLog(string line, string fileName)
+    {
         if (line.Length > 20 && line[0] == '[')
         {
             int endBracket = line.IndexOf(']');
@@ -121,12 +169,12 @@ public sealed class MemoryMappedLogWatcher : ILogWatcher
                         }
                     }
 
-                    return new LogEntry(date, level, msg, Path.GetFileName(sourceFile));
+                    return new LogEntry(date, level, msg, fileName, "");
                 }
             }
         }
 
-        return new LogEntry(DateTime.Now, "INFO", line, Path.GetFileName(sourceFile));
+        return new LogEntry(DateTime.Now, "INFO", line, fileName, "");
     }
 
     public void StopWatching()

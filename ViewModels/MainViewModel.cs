@@ -96,7 +96,11 @@ public class MainViewModel : ViewModelBase
     private bool FilterLogic(object obj)
     {
         if (ActiveFilter == "ALL") return true;
-        if (obj is LogEntry entry) return entry.Level == ActiveFilter;
+        if (obj is LogEntry entry)
+        {
+            if (ActiveFilter == "ERROR") return entry.Level == "ERROR" || entry.Level == "Error";
+            if (ActiveFilter == "WARN") return entry.Level == "WARN" || entry.Level == "Warning" || entry.Level == "Warn";
+        }
         return false;
     }
 
@@ -159,8 +163,8 @@ public class MainViewModel : ViewModelBase
                 Logs.Add(entry);
                 TotalLogs++;
 
-                if (entry.Level == "ERROR") ErrorCount++;
-                if (entry.Level == "WARN") WarnCount++;
+                if (entry.Level == "ERROR" || entry.Level == "Error") ErrorCount++;
+                if (entry.Level == "WARN" || entry.Level == "Warning" || entry.Level == "Warn") WarnCount++;
             });
         }
     }

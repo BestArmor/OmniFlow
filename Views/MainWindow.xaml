@@ -45,7 +45,7 @@
                         </Border>
                         <TextBlock Text="OmniFlow" Foreground="#E6EDF3" FontSize="16" FontWeight="Bold" Margin="12,0,0,0" VerticalAlignment="Center"/>
                         <Border Background="#161B22" CornerRadius="5" Padding="8,3" Margin="15,0,0,0" VerticalAlignment="Center">
-                            <TextBlock Text="v1.0" Foreground="#8B949E" FontSize="11"/>
+                            <TextBlock Text="v1.1" Foreground="#8B949E" FontSize="11"/>
                         </Border>
                     </StackPanel>
                     <Button x:Name="CloseBtn" Style="{StaticResource IconButton}" Width="36" Height="32" HorizontalAlignment="Right" Click="CloseBtn_Click">
@@ -136,6 +136,7 @@
                                             <ColumnDefinition Width="160"/>
                                             <ColumnDefinition Width="70"/>
                                             <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="250"/>
                                         </Grid.ColumnDefinitions>
                                         
                                         <TextBlock Grid.Column="0" Text="{Binding Timestamp, StringFormat='yyyy-MM-dd HH:mm:ss'}" Foreground="#8B949E" FontFamily="Consolas" FontSize="12"/>
@@ -146,13 +147,16 @@
                                                     <Setter Property="Foreground" Value="#7C3AED"/>
                                                     <Style.Triggers>
                                                         <DataTrigger Binding="{Binding Level}" Value="ERROR"><Setter Property="Foreground" Value="#F85149"/></DataTrigger>
+                                                        <DataTrigger Binding="{Binding Level}" Value="Error"><Setter Property="Foreground" Value="#F85149"/></DataTrigger>
                                                         <DataTrigger Binding="{Binding Level}" Value="WARN"><Setter Property="Foreground" Value="#D29922"/></DataTrigger>
+                                                        <DataTrigger Binding="{Binding Level}" Value="Warning"><Setter Property="Foreground" Value="#D29922"/></DataTrigger>
                                                     </Style.Triggers>
                                                 </Style>
                                             </TextBlock.Style>
                                         </TextBlock>
                                         
                                         <TextBlock Grid.Column="2" Text="{Binding Message}" Foreground="#E6EDF3" FontFamily="Consolas" FontSize="12" TextWrapping="NoWrap"/>
+                                        <TextBlock Grid.Column="3" Text="{Binding Properties}" Foreground="#8B949E" FontFamily="Consolas" FontSize="11" TextTrimming="CharacterEllipsis" Margin="20,0,0,0"/>
                                     </Grid>
                                 </DataTemplate>
                             </ListBox.ItemTemplate>
