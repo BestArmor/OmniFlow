@@ -27,7 +27,6 @@
                         <RowDefinition Height="Auto"/>
                     </Grid.RowDefinitions>
 
-                    <!-- Logo & Title -->
                     <StackPanel Orientation="Horizontal" Margin="20,30,0,20">
                         <Border Width="28" Height="28" CornerRadius="6">
                             <Border.Background>
@@ -41,10 +40,8 @@
                         <TextBlock Text="OmniFlow" Foreground="#E6EDF3" FontSize="16" FontWeight="Bold" Margin="12,0,0,0" VerticalAlignment="Center"/>
                     </StackPanel>
 
-                    <!-- Add Files Button -->
                     <Button Grid.Row="1" Style="{StaticResource IconButton}" Command="{Binding AddFileCommand}" Content="+ ADD FILES" HorizontalAlignment="Stretch" Margin="15,0,15,15" Padding="15,10" Foreground="#7C3AED" FontSize="12" FontWeight="Medium" Background="#161B22"/>
 
-                    <!-- Active Files List -->
                     <ListBox Grid.Row="2" x:Name="FilesList" ItemsSource="{Binding ActiveFiles}" Background="Transparent" BorderThickness="0" Margin="10,0">
                         <ListBox.ItemTemplate>
                             <DataTemplate>
@@ -78,7 +75,6 @@
                         </ListBox.ItemContainerStyle>
                     </ListBox>
 
-                    <!-- Start/Stop Buttons -->
                     <StackPanel Grid.Row="3" Margin="15,0,15,20">
                         <Button Style="{StaticResource PrimaryBtn}" Command="{Binding StartCommand}" Content="START STREAM" HorizontalAlignment="Stretch" Margin="0,0,0,10" Padding="0,10" FontSize="13"/>
                         <Button Style="{StaticResource IconButton}" Command="{Binding StopCommand}" Content="STOP STREAM" HorizontalAlignment="Stretch" Padding="0,8" FontSize="12" FontWeight="Medium" Foreground="#F85149" Background="#21262D"/>
@@ -101,11 +97,10 @@
                     </Ellipse>
                 </Canvas>
 
-                <!-- Top Bar -->
                 <Grid Grid.Row="0">
                     <StackPanel Orientation="Horizontal">
                         <Border Background="#161B22" CornerRadius="5" Padding="8,3" VerticalAlignment="Center">
-                            <TextBlock Text="v1.2" Foreground="#8B949E" FontSize="11"/>
+                            <TextBlock Text="v1.3" Foreground="#8B949E" FontSize="11"/>
                         </Border>
                     </StackPanel>
                     <Button x:Name="CloseBtn" Style="{StaticResource IconButton}" Width="36" Height="32" HorizontalAlignment="Right" Click="CloseBtn_Click">
@@ -113,7 +108,6 @@
                     </Button>
                 </Grid>
 
-                <!-- Metrics Dashboard -->
                 <Grid Grid.Row="1" Margin="0,15,0,15">
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="*"/>
@@ -141,12 +135,50 @@
                     </Border>
                 </Grid>
 
-                <!-- Filter Tabs -->
-                <StackPanel Grid.Row="2" Orientation="Horizontal" Margin="0,0,0,10">
-                    <Button Command="{Binding FilterCommand}" CommandParameter="ALL" Content="ALL" Foreground="#E6EDF3" FontSize="11" FontWeight="Medium" Background="#21262D" Style="{StaticResource IconButton}" Padding="15,5" Margin="0,0,5,0"/>
-                    <Button Command="{Binding FilterCommand}" CommandParameter="ERROR" Content="ERRORS" Foreground="#F85149" FontSize="11" FontWeight="Medium" Background="#21262D" Style="{StaticResource IconButton}" Padding="15,5" Margin="0,0,5,0"/>
-                    <Button Command="{Binding FilterCommand}" CommandParameter="WARN" Content="WARNINGS" Foreground="#D29922" FontSize="11" FontWeight="Medium" Background="#21262D" Style="{StaticResource IconButton}" Padding="15,5"/>
-                </StackPanel>
+                <!-- Filter Tabs & Search -->
+                <Grid Grid.Row="2" Margin="0,0,0,10">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="*"/>
+                    </Grid.ColumnDefinitions>
+
+                    <Button Grid.Column="0" Command="{Binding FilterCommand}" CommandParameter="ALL" Content="ALL" Foreground="#E6EDF3" FontSize="11" FontWeight="Medium" Background="#21262D" Style="{StaticResource IconButton}" Padding="15,5" Margin="0,0,5,0"/>
+                    <Button Grid.Column="1" Command="{Binding FilterCommand}" CommandParameter="ERROR" Content="ERRORS" Foreground="#F85149" FontSize="11" FontWeight="Medium" Background="#21262D" Style="{StaticResource IconButton}" Padding="15,5" Margin="0,0,5,0"/>
+                    <Button Grid.Column="2" Command="{Binding FilterCommand}" CommandParameter="WARN" Content="WARNINGS" Foreground="#D29922" FontSize="11" FontWeight="Medium" Background="#21262D" Style="{StaticResource IconButton}" Padding="15,5"/>
+
+                    <!-- Search Box -->
+                    <Border Grid.Column="3" CornerRadius="6" BorderThickness="1" Padding="10,0" HorizontalAlignment="Right" Width="350">
+                        <Border.Style>
+                            <Style TargetType="Border">
+                                <Setter Property="Background" Value="#0D1117"/>
+                                <Setter Property="BorderBrush" Value="#30363D"/>
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding IsRegexValid}" Value="False">
+                                        <Setter Property="BorderBrush" Value="#F85149"/>
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </Border.Style>
+                        <Grid>
+                            <Path Data="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z" Fill="#8B949E" Stretch="Uniform" Width="14" Height="14" HorizontalAlignment="Left" VerticalAlignment="Center"/>
+                            <TextBox Text="{Binding SearchText, UpdateSourceTrigger=PropertyChanged, Delay=300}" Background="Transparent" BorderThickness="0" Foreground="#E6EDF3" FontSize="13" VerticalContentAlignment="Center" Margin="25,0,0,0" CaretBrush="#7C3AED"/>
+                            <TextBlock Text="Regex search..." Foreground="#484F58" VerticalAlignment="Center" Margin="25,0,0,0" IsHitTestVisible="False">
+                                <TextBlock.Style>
+                                    <Style TargetType="TextBlock">
+                                        <Setter Property="Visibility" Value="Collapsed"/>
+                                        <Style.Triggers>
+                                            <DataTrigger Binding="{Binding SearchText}" Value="">
+                                                <Setter Property="Visibility" Value="Visible"/>
+                                            </DataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </TextBlock.Style>
+                            </TextBlock>
+                        </Grid>
+                    </Border>
+                </Grid>
 
                 <!-- Log Viewer -->
                 <Border Grid.Row="3" Background="#010409" CornerRadius="12" BorderBrush="#30363D" BorderThickness="1">
@@ -161,24 +193,23 @@
                             </Grid>
                         </Border>
                         
-                        <ListBox ItemsSource="{Binding FilteredLogs}" Background="Transparent" BorderThickness="0" 
-                                 ScrollViewer.HorizontalScrollBarVisibility="Auto" ScrollViewer.VerticalScrollBarVisibility="Auto"
-                                 VirtualizingPanel.IsVirtualizing="True" VirtualizingPanel.VirtualizationMode="Recycling">
-                            
-                            <ListBox.ItemTemplate>
+                            <ListBox ItemsSource="{Binding FilteredLogs}" Background="Transparent" BorderThickness="0" 
+                                 ScrollViewer.HorizontalScrollBarVisibility="Disabled" ScrollViewer.VerticalScrollBarVisibility="Auto"
+                                 VirtualizingPanel.IsVirtualizing="True" VirtualizingPanel.VirtualizationMode="Recycling" VirtualizingPanel.ScrollUnit="Pixel">                        
+                                                        <ListBox.ItemTemplate>
                                 <DataTemplate>
                                     <Grid Margin="0,2">
                                         <Grid.ColumnDefinitions>
-                                            <ColumnDefinition Width="140"/>
+                                            <ColumnDefinition Width="160"/>
                                             <ColumnDefinition Width="60"/>
                                             <ColumnDefinition Width="80"/>
                                             <ColumnDefinition Width="*"/>
-                                            <ColumnDefinition Width="200"/>
+                                            <ColumnDefinition Width="250"/>
                                         </Grid.ColumnDefinitions>
                                         
-                                        <TextBlock Grid.Column="0" Text="{Binding Timestamp, StringFormat='yyyy-MM-dd HH:mm:ss'}" Foreground="#8B949E" FontFamily="Consolas" FontSize="12"/>
+                                        <TextBlock Grid.Column="0" Text="{Binding Timestamp, StringFormat='yyyy-MM-dd HH:mm:ss'}" Foreground="#8B949E" FontFamily="Consolas" FontSize="12" VerticalAlignment="Top"/>
                                         
-                                        <TextBlock Grid.Column="1" Text="{Binding Level}" FontFamily="Consolas" FontSize="12" FontWeight="Bold">
+                                        <TextBlock Grid.Column="1" Text="{Binding Level}" FontFamily="Consolas" FontSize="12" FontWeight="Bold" VerticalAlignment="Top">
                                             <TextBlock.Style>
                                                 <Style TargetType="TextBlock">
                                                     <Setter Property="Foreground" Value="#7C3AED"/>
@@ -192,10 +223,10 @@
                                             </TextBlock.Style>
                                         </TextBlock>
 
-                                        <TextBlock Grid.Column="2" Text="{Binding SourceFile}" Foreground="#EC4899" FontFamily="Consolas" FontSize="12" TextTrimming="CharacterEllipsis"/>
+                                        <TextBlock Grid.Column="2" Text="{Binding SourceFile}" Foreground="#EC4899" FontFamily="Consolas" FontSize="12" TextTrimming="CharacterEllipsis" Margin="0,0,10,0" VerticalAlignment="Top"/>
                                         
-                                        <TextBlock Grid.Column="3" Text="{Binding Message}" Foreground="#E6EDF3" FontFamily="Consolas" FontSize="12" TextWrapping="NoWrap" Margin="10,0,0,0"/>
-                                        <TextBlock Grid.Column="4" Text="{Binding Properties}" Foreground="#8B949E" FontFamily="Consolas" FontSize="11" TextTrimming="CharacterEllipsis" Margin="20,0,0,0"/>
+                                        <TextBlock Grid.Column="3" Text="{Binding Message}" Foreground="#E6EDF3" FontFamily="Consolas" FontSize="12" TextWrapping="Wrap" Margin="0,0,10,0" VerticalAlignment="Top"/>
+                                        <TextBlock Grid.Column="4" Text="{Binding Properties}" Foreground="#8B949E" FontFamily="Consolas" FontSize="11" TextWrapping="Wrap" VerticalAlignment="Top"/>
                                     </Grid>
                                 </DataTemplate>
                             </ListBox.ItemTemplate>

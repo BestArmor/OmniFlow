@@ -109,7 +109,7 @@ public sealed class MemoryMappedLogWatcher : ILogWatcher
                     {
                         case "@t":
                         case "timestamp":
-                            DateTime.TryParse(reader.GetString(), out timestamp);
+                          DateTime.TryParse(reader.GetString(), System.Globalization.CultureInfo.InvariantCulture, System.Globalization.DateTimeStyles.RoundtripKind, out timestamp);
                             break;
                         case "@l":
                         case "level":

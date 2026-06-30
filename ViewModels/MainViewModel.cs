@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
+using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
@@ -61,6 +62,27 @@ public class MainViewModel : ViewModelBase
         }
     }
 
+    private string _searchText = "";
+    public string SearchText
+    {
+        get => _searchText;
+        set
+        {
+            SetProperty(ref _searchText, value);
+            UpdateSearchRegex();
+            FilteredLogs.Refresh();
+        }
+    }
+
+    private bool _isRegexValid = true;
+    public bool IsRegexValid
+    {
+        get => _isRegexValid;
+        set => SetProperty(ref _isRegexValid, value);
+    }
+
+    private Regex? _searchRegex;
+    
     public RelayCommand AddFileCommand { get; }
     public RelayCommand StartCommand { get; }
     public RelayCommand StopCommand { get; }
@@ -91,15 +113,45 @@ public class MainViewModel : ViewModelBase
         _ = Task.Run(ReadChannelAsync);
     }
 
+    private void UpdateSearchRegex()
+    {
+        if (string.IsNullOrWhiteSpace(SearchText))
+        {
+            _searchRegex = null;
+            IsRegexValid = true;
+            return;
+        }
+
+        try
+        {
+            // Компилируем регекс для максимальной скорости поиска
+            _searchRegex = new Regex(SearchText, RegexOptions.Compiled | RegexOptions.IgnoreCase);
+            IsRegexValid = true;
+        }
+        catch
+        {
+            // Если пользователь написал кривую регекс (например, открыл скобку и не закрыл)
+            _searchRegex = null;
+            IsRegexValid = false;
+        }
+    }
+
     private bool FilterLogic(object obj)
     {
-        if (ActiveFilter == "ALL") return true;
-        if (obj is LogEntry entry)
+        if (obj is not LogEntry entry) return false;
+
+        // 1. Фильтр по уровню лога
+        if (ActiveFilter == "ERROR" && !(entry.Level == "ERROR" || entry.Level == "Error")) return false;
+        if (ActiveFilter == "WARN" && !(entry.Level == "WARN" || entry.Level == "Warning" || entry.Level == "Warn")) return false;
+
+        // 2. Фильтр по регулярке (ищем в сообщении и в свойствах)
+        if (_searchRegex != null)
         {
-            if (ActiveFilter == "ERROR") return entry.Level == "ERROR" || entry.Level == "Error";
-            if (ActiveFilter == "WARN") return entry.Level == "WARN" || entry.Level == "Warning" || entry.Level == "Warn";
+            if (!_searchRegex.IsMatch(entry.Message) && !_searchRegex.IsMatch(entry.Properties ?? ""))
+                return false;
         }
-        return false;
+
+        return true;
     }
 
     private void AddFile()
@@ -123,7 +175,7 @@ public class MainViewModel : ViewModelBase
 
     private async void StartWatching()
     {
-        _channel.Clear(); // Очищаем застрявшие логи
+        _channel.Clear();
         Logs.Clear();
         TotalLogs = 0; ErrorCount = 0; WarnCount = 0;
 
@@ -172,7 +224,6 @@ public class MainViewModel : ViewModelBase
             {
                 if (Logs.Count >= 10000) Logs.RemoveAt(0);
                 
-                // Вставляем лог по таймстемпу (Merge Sort логика)
                 int index = Logs.Count - 1;
                 while (index >= 0 && Logs[index].Timestamp > entry.Timestamp)
                 {
