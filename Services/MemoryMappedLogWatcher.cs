@@ -182,3 +182,14 @@ public sealed class MemoryMappedLogWatcher : ILogWatcher
         _cts?.Cancel();
     }
 }
+public sealed class MemoryMappedLogWatcherFactory : ILogWatcherFactory
+{
+    private readonly LogChannel _channel;
+
+    public MemoryMappedLogWatcherFactory(LogChannel channel)
+    {
+        _channel = channel;
+    }
+
+    public ILogWatcher CreateWatcher() => new MemoryMappedLogWatcher(_channel);
+}

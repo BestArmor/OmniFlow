@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Threading;
@@ -13,10 +14,12 @@ namespace OmniFlow.ViewModels;
 public class MainViewModel : ViewModelBase
 {
     private readonly LogChannel _channel;
-    private readonly ILogWatcher _logWatcher;
+    private readonly ILogWatcherFactory _watcherFactory;
     private CancellationTokenSource? _watcherCts;
+    private readonly List<ILogWatcher> _activeWatchers = new();
 
     public ObservableCollection<LogEntry> Logs { get; } = new();
+    public ObservableCollection<string> ActiveFiles { get; } = new();
     public ICollectionView FilteredLogs { get; }
 
     private string _statusText = "Ready";
@@ -24,17 +27,6 @@ public class MainViewModel : ViewModelBase
     {
         get => _statusText;
         set => SetProperty(ref _statusText, value);
-    }
-
-    private string _filePath = "";
-    public string FilePath
-    {
-        get => _filePath;
-        set
-        {
-            SetProperty(ref _filePath, value);
-            StartCommand.RaiseCanExecuteChanged();
-        }
     }
 
     private int _totalLogs;
@@ -69,22 +61,28 @@ public class MainViewModel : ViewModelBase
         }
     }
 
-    public RelayCommand BrowseCommand { get; }
+    public RelayCommand AddFileCommand { get; }
     public RelayCommand StartCommand { get; }
     public RelayCommand StopCommand { get; }
+    public RelayCommand RemoveFileCommand { get; }
     public RelayCommand FilterCommand { get; }
 
-    public MainViewModel(LogChannel channel, ILogWatcher logWatcher)
+    public MainViewModel(LogChannel channel, ILogWatcherFactory watcherFactory)
     {
         _channel = channel;
-        _logWatcher = logWatcher;
+        _watcherFactory = watcherFactory;
 
         FilteredLogs = CollectionViewSource.GetDefaultView(Logs);
         FilteredLogs.Filter = FilterLogic;
 
-        BrowseCommand = new RelayCommand(_ => BrowseFile());
-        StartCommand = new RelayCommand(_ => StartWatching(), _ => string.IsNullOrEmpty(FilePath) is false && _watcherCts is null);
+        AddFileCommand = new RelayCommand(_ => AddFile());
+        StartCommand = new RelayCommand(_ => StartWatching(), _ => ActiveFiles.Count > 0 && _watcherCts is null);
         StopCommand = new RelayCommand(_ => StopWatching(), _ => _watcherCts is not null);
+        RemoveFileCommand = new RelayCommand(param => 
+        {
+            if (param is string file) ActiveFiles.Remove(file);
+            StartCommand.RaiseCanExecuteChanged();
+        });
         FilterCommand = new RelayCommand(param => 
         {
             if (param is string filter) ActiveFilter = filter;
@@ -104,22 +102,28 @@ public class MainViewModel : ViewModelBase
         return false;
     }
 
-    private void BrowseFile()
+    private void AddFile()
     {
         var dlg = new OpenFileDialog
         {
             Filter = "Log files (*.log)|*.log|Text files (*.txt)|*.txt|All files (*.*)|*.*",
-            Title = "Select Log File"
+            Title = "Select Log Files",
+            Multiselect = true
         };
 
         if (dlg.ShowDialog() == true)
         {
-            FilePath = dlg.FileName;
+            foreach (var file in dlg.FileNames)
+            {
+                if (!ActiveFiles.Contains(file)) ActiveFiles.Add(file);
+            }
+            StartCommand.RaiseCanExecuteChanged();
         }
     }
 
     private async void StartWatching()
     {
+        _channel.Clear(); // Очищаем застрявшие логи
         Logs.Clear();
         TotalLogs = 0; ErrorCount = 0; WarnCount = 0;
 
@@ -130,7 +134,15 @@ public class MainViewModel : ViewModelBase
 
         try
         {
-            await _logWatcher.StartWatchingAsync(FilePath, _watcherCts.Token);
+            var tasks = new List<Task>();
+            foreach (var file in ActiveFiles)
+            {
+                var watcher = _watcherFactory.CreateWatcher();
+                _activeWatchers.Add(watcher);
+                tasks.Add(watcher.StartWatchingAsync(file, _watcherCts.Token));
+            }
+
+            await Task.WhenAll(tasks);
         }
         catch (OperationCanceledException)
         {
@@ -144,6 +156,9 @@ public class MainViewModel : ViewModelBase
         _watcherCts?.Dispose();
         _watcherCts = null;
         
+        foreach (var watcher in _activeWatchers) watcher.StopWatching();
+        _activeWatchers.Clear();
+
         StartCommand.RaiseCanExecuteChanged();
         StopCommand.RaiseCanExecuteChanged();
         StatusText = "Stopped";
@@ -155,12 +170,16 @@ public class MainViewModel : ViewModelBase
         {
             Application.Current?.Dispatcher.Invoke(() =>
             {
-                if (Logs.Count >= 10000)
-                {
-                    Logs.RemoveAt(0);
-                }
+                if (Logs.Count >= 10000) Logs.RemoveAt(0);
                 
-                Logs.Add(entry);
+                // Вставляем лог по таймстемпу (Merge Sort логика)
+                int index = Logs.Count - 1;
+                while (index >= 0 && Logs[index].Timestamp > entry.Timestamp)
+                {
+                    index--;
+                }
+                Logs.Insert(index + 1, entry);
+                
                 TotalLogs++;
 
                 if (entry.Level == "ERROR" || entry.Level == "Error") ErrorCount++;

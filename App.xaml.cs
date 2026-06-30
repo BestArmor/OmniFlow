@@ -29,7 +29,7 @@ public partial class App : Application
         var services = new ServiceCollection();
 
         services.AddSingleton<LogChannel>();
-        services.AddSingleton<ILogWatcher, MemoryMappedLogWatcher>();
+        services.AddSingleton<ILogWatcherFactory, MemoryMappedLogWatcherFactory>();
 
         services.AddSingleton<MainViewModel>();
 

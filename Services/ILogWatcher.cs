@@ -8,3 +8,8 @@ public interface ILogWatcher
     Task StartWatchingAsync(string filePath, CancellationToken cancellationToken);
     void StopWatching();
 }
+
+public interface ILogWatcherFactory
+{
+    ILogWatcher CreateWatcher();
+}
