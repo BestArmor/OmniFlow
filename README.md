@@ -66,3 +66,6 @@ We are just getting started. Here is what's coming in future releases:
   <br/>
   Made with 🔥 by <a href="https://github.com/BestArmor">BestArmor</a>
 </div>
+
+## 📄 License
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
