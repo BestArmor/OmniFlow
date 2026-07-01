@@ -9,6 +9,7 @@ using System.Windows.Data;
 using Microsoft.Win32;
 using OmniFlow.Models;
 using OmniFlow.Services;
+using OmniFlow.Views;
 
 namespace OmniFlow.ViewModels;
 
@@ -81,6 +82,13 @@ public class MainViewModel : ViewModelBase
         set => SetProperty(ref _isRegexValid, value);
     }
 
+    private bool _isPaused;
+    public bool IsPaused
+    {
+        get => _isPaused;
+        set => SetProperty(ref _isPaused, value);
+    }
+
     private Regex? _searchRegex;
     
     public RelayCommand AddFileCommand { get; }
@@ -124,13 +132,11 @@ public class MainViewModel : ViewModelBase
 
         try
         {
-            // Компилируем регекс для максимальной скорости поиска
             _searchRegex = new Regex(SearchText, RegexOptions.Compiled | RegexOptions.IgnoreCase);
             IsRegexValid = true;
         }
         catch
         {
-            // Если пользователь написал кривую регекс (например, открыл скобку и не закрыл)
             _searchRegex = null;
             IsRegexValid = false;
         }
@@ -140,11 +146,9 @@ public class MainViewModel : ViewModelBase
     {
         if (obj is not LogEntry entry) return false;
 
-        // 1. Фильтр по уровню лога
         if (ActiveFilter == "ERROR" && !(entry.Level == "ERROR" || entry.Level == "Error")) return false;
         if (ActiveFilter == "WARN" && !(entry.Level == "WARN" || entry.Level == "Warning" || entry.Level == "Warn")) return false;
 
-        // 2. Фильтр по регулярке (ищем в сообщении и в свойствах)
         if (_searchRegex != null)
         {
             if (!_searchRegex.IsMatch(entry.Message) && !_searchRegex.IsMatch(entry.Properties ?? ""))
@@ -222,6 +226,8 @@ public class MainViewModel : ViewModelBase
         {
             Application.Current?.Dispatcher.Invoke(() =>
             {
+                if (IsPaused) return;
+                
                 if (Logs.Count >= 10000) Logs.RemoveAt(0);
                 
                 int index = Logs.Count - 1;
@@ -235,7 +241,28 @@ public class MainViewModel : ViewModelBase
 
                 if (entry.Level == "ERROR" || entry.Level == "Error") ErrorCount++;
                 if (entry.Level == "WARN" || entry.Level == "Warning" || entry.Level == "Warn") WarnCount++;
+
+                if (!IsPaused && Application.Current.MainWindow is MainWindow mw)
+                {
+                    var scrollViewer = GetScrollViewer(mw.LogList);
+                    if (scrollViewer != null && scrollViewer.VerticalOffset >= scrollViewer.ScrollableHeight - 50)
+                    {
+                        mw.LogList.ScrollIntoView(Logs[Logs.Count - 1]);
+                    }
+                }
             });
         }
+    }
+
+    private static System.Windows.Controls.ScrollViewer? GetScrollViewer(System.Windows.DependencyObject obj)
+    {
+        if (obj is System.Windows.Controls.ScrollViewer) return (System.Windows.Controls.ScrollViewer)obj;
+        for (int i = 0; i < System.Windows.Media.VisualTreeHelper.GetChildrenCount(obj); i++)
+        {
+            var child = System.Windows.Media.VisualTreeHelper.GetChild(obj, i);
+            var result = GetScrollViewer(child);
+            if (result != null) return result;
+        }
+        return null;
     }
 }
