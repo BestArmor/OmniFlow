@@ -41,5 +41,17 @@ namespace OmniFlow.Views
                 }
             }
         }
+
+        // Удаление файла по клику
+        private void FilesList_PreviewMouseLeftButtonDown(object sender, MouseButtonEventArgs e)
+        {
+            if (e.OriginalSource is FrameworkElement fe && fe.DataContext is string file)
+            {
+                if (DataContext is MainViewModel vm)
+                {
+                    vm.RemoveFileCommand.Execute(file);
+                }
+            }
+        }
     }
 }

@@ -46,39 +46,43 @@
 
                     <Button Grid.Row="1" Style="{StaticResource IconButton}" Command="{Binding AddFileCommand}" Content="+ ADD FILES" HorizontalAlignment="Stretch" Margin="15,0,15,15" Padding="15,10" Foreground="#7C3AED" FontSize="12" FontWeight="Medium" Background="#161B22"/>
 
-                    <ListBox Grid.Row="2" x:Name="FilesList" ItemsSource="{Binding ActiveFiles}" Background="Transparent" BorderThickness="0" Margin="10,0">
+                    <ListBox Grid.Row="2" x:Name="FilesList" ItemsSource="{Binding ActiveFiles}" Background="Transparent" BorderThickness="0" Margin="10,0" PreviewMouseLeftButtonDown="FilesList_PreviewMouseLeftButtonDown">
                         <ListBox.ItemTemplate>
                             <DataTemplate>
                                 <Grid Margin="0,5">
                                     <Grid.ColumnDefinitions>
                                         <ColumnDefinition Width="Auto"/>
                                         <ColumnDefinition Width="*"/>
-                                        <ColumnDefinition Width="Auto"/>
                                     </Grid.ColumnDefinitions>
                                     <Path Grid.Column="0" Data="M10 4H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2h-8l-2-2z" Fill="#8B949E" Stretch="Uniform" Width="14" Height="14" VerticalAlignment="Center"/>
                                     <TextBlock Grid.Column="1" Text="{Binding}" Foreground="#E6EDF3" FontFamily="Consolas" FontSize="12" Margin="10,0,0,0" TextTrimming="CharacterEllipsis" VerticalAlignment="Center"/>
-                                    <Button Grid.Column="2" Content="✕" Foreground="#F85149" Background="Transparent" BorderThickness="0" Cursor="Hand" 
-                                            Command="{Binding DataContext.RemoveFileCommand, RelativeSource={RelativeSource AncestorType=Window}}" CommandParameter="{Binding}" Width="20" Height="20"/>
                                 </Grid>
                             </DataTemplate>
                         </ListBox.ItemTemplate>
                         <ListBox.ItemContainerStyle>
                             <Style TargetType="ListBoxItem">
-                                <Setter Property="Padding" Value="10,0"/>
+                                <Setter Property="Padding" Value="10,5"/>
                                 <Setter Property="Background" Value="Transparent"/>
+                                <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
                                 <Setter Property="Template">
                                     <Setter.Value>
                                         <ControlTemplate TargetType="ListBoxItem">
-                                            <Border Background="{TemplateBinding Background}" CornerRadius="6" Padding="{TemplateBinding Padding}">
-                                                <ContentPresenter/>
+                                            <Border x:Name="bd" Background="{TemplateBinding Background}" CornerRadius="6" Padding="{TemplateBinding Padding}">
+                                                <ContentPresenter HorizontalAlignment="Stretch"/>
                                             </Border>
+                                            <ControlTemplate.Triggers>
+                                                <Trigger Property="IsMouseOver" Value="True">
+                                                    <Setter TargetName="bd" Property="Background" Value="#DA3633"/>
+                                                    <Setter Property="Cursor" Value="Hand"/>
+                                                </Trigger>
+                                            </ControlTemplate.Triggers>
                                         </ControlTemplate>
                                     </Setter.Value>
                                 </Setter>
                             </Style>
                         </ListBox.ItemContainerStyle>
                     </ListBox>
-
+                    
                     <StackPanel Grid.Row="3" Margin="15,0,15,20">
                         <Button Style="{StaticResource PrimaryBtn}" Command="{Binding StartCommand}" Content="START STREAM" HorizontalAlignment="Stretch" Margin="0,0,0,10" Padding="0,10" FontSize="13"/>
                         <Button Style="{StaticResource IconButton}" Command="{Binding StopCommand}" Content="STOP STREAM" HorizontalAlignment="Stretch" Padding="0,8" FontSize="12" FontWeight="Medium" Foreground="#F85149" Background="#21262D"/>
@@ -104,7 +108,7 @@
                 <Grid Grid.Row="0">
                     <StackPanel Orientation="Horizontal">
                         <Border Background="#161B22" CornerRadius="5" Padding="8,3" VerticalAlignment="Center">
-                            <TextBlock Text="v1.4" Foreground="#8B949E" FontSize="11"/>
+                            <TextBlock Text="v1.5" Foreground="#8B949E" FontSize="11"/>
                         </Border>
                     </StackPanel>
                     <Button x:Name="CloseBtn" Style="{StaticResource IconButton}" Width="36" Height="32" HorizontalAlignment="Right" Click="CloseBtn_Click">
@@ -139,20 +143,21 @@
                     </Border>
                 </Grid>
 
-                <!-- Filter Tabs & Search -->
+                <!-- Filter Tabs & Search & Export -->
                 <Grid Grid.Row="2" Margin="0,0,0,10">
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="Auto"/>
                         <ColumnDefinition Width="Auto"/>
                         <ColumnDefinition Width="Auto"/>
                         <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
                     </Grid.ColumnDefinitions>
 
                     <Button Grid.Column="0" Command="{Binding FilterCommand}" CommandParameter="ALL" Content="ALL" Foreground="#E6EDF3" FontSize="11" FontWeight="Medium" Background="#21262D" Style="{StaticResource IconButton}" Padding="15,5" Margin="0,0,5,0"/>
                     <Button Grid.Column="1" Command="{Binding FilterCommand}" CommandParameter="ERROR" Content="ERRORS" Foreground="#F85149" FontSize="11" FontWeight="Medium" Background="#21262D" Style="{StaticResource IconButton}" Padding="15,5" Margin="0,0,5,0"/>
                     <Button Grid.Column="2" Command="{Binding FilterCommand}" CommandParameter="WARN" Content="WARNINGS" Foreground="#D29922" FontSize="11" FontWeight="Medium" Background="#21262D" Style="{StaticResource IconButton}" Padding="15,5"/>
 
-                    <Border Grid.Column="3" CornerRadius="6" BorderThickness="1" Padding="10,0" HorizontalAlignment="Right" Width="350">
+                    <Border Grid.Column="3" CornerRadius="6" BorderThickness="1" Padding="10,0" HorizontalAlignment="Right" Width="300" Margin="0,0,10,0">
                         <Border.Style>
                             <Style TargetType="Border">
                                 <Setter Property="Background" Value="#0D1117"/>
@@ -181,6 +186,8 @@
                             </TextBlock>
                         </Grid>
                     </Border>
+
+                    <Button Grid.Column="4" Style="{StaticResource IconButton}" Command="{Binding ExportCommand}" Content="EXPORT" Padding="15,8" Foreground="#3FB950" FontSize="11" FontWeight="Medium" Background="#21262D"/>
                 </Grid>
 
                 <!-- Log Viewer -->

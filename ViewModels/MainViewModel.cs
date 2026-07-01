@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
+using System.IO;
 using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
@@ -96,6 +97,7 @@ public class MainViewModel : ViewModelBase
     public RelayCommand StopCommand { get; }
     public RelayCommand RemoveFileCommand { get; }
     public RelayCommand FilterCommand { get; }
+    public RelayCommand ExportCommand { get; }
 
     public MainViewModel(LogChannel channel, ILogWatcherFactory watcherFactory)
     {
@@ -117,6 +119,7 @@ public class MainViewModel : ViewModelBase
         {
             if (param is string filter) ActiveFilter = filter;
         });
+        ExportCommand = new RelayCommand(async _ => await ExportLogsAsync());
 
         _ = Task.Run(ReadChannelAsync);
     }
@@ -218,6 +221,50 @@ public class MainViewModel : ViewModelBase
         StartCommand.RaiseCanExecuteChanged();
         StopCommand.RaiseCanExecuteChanged();
         StatusText = "Stopped";
+    }
+
+    private async Task ExportLogsAsync()
+    {
+        var dlg = new SaveFileDialog
+        {
+            Filter = "Log files (*.log)|*.log|Text files (*.txt)|*.txt|All files (*.*)|*.*",
+            FileName = "OmniFlow_Export.log",
+            Title = "Export Filtered Logs"
+        };
+
+        if (dlg.ShowDialog() == true)
+        {
+            StatusText = "Exporting...";
+            
+            try
+            {
+                var filteredList = new List<LogEntry>();
+                foreach (var item in FilteredLogs)
+                {
+                    if (item is LogEntry entry) filteredList.Add(entry);
+                }
+
+                using (var writer = new StreamWriter(dlg.FileName))
+                {
+                    foreach (var entry in filteredList)
+                    {
+                        var line = $"[{entry.Timestamp:yyyy-MM-dd HH:mm:ss}] [{entry.Level}] [{entry.SourceFile}] {entry.Message}";
+                        
+                        if (!string.IsNullOrWhiteSpace(entry.Properties))
+                        {
+                            line += $" | {entry.Properties}";
+                        }
+
+                        await writer.WriteLineAsync(line);
+                    }
+                }
+                StatusText = "Export Complete!";
+            }
+            catch
+            {
+                StatusText = "Export Failed.";
+            }
+        }
     }
 
     private async Task ReadChannelAsync()
