@@ -11,10 +11,6 @@
   ![WPF](https://img.shields.io/badge/WPF-512BD4?style=for-the-badge&logo=windows&logoColor=white)
   ![License](https://img.shields.io/badge/License-MIT-EC4899?style=for-the-badge)
   
-  <br/>
-  
-  <img src="https://z-cdn-media.chatglm.cn/files/7956fe80-bc2f-48a0-a0f1-a7cedc819aec.png?auth_key=1882903479-9aa77555e4844e3abf7fb72a37738c29-0-324324dc71c44eb6833de17cfb0c67c4" width="90%" alt="OmniFlow Dashboard" />
-  
   <br/><br/>
 </div>
 
@@ -39,26 +35,29 @@
 ## 🏗 Architecture
 OmniFlow follows a strict Clean Architecture approach:
 
-```text
-OmniFlow/
-├── Models/             # Value types (readonly record struct)
-├── Services/           # Core logic (Channels, File Watchers, Parsers)
-├── ViewModels/         # State & Command logic (INotifyPropertyChanged)
-└── Views/              # XAML UI components
-🗺 Roadmap
- Multi-File Aggregation: Tail multiple files simultaneously.
- Advanced Regex Search: Highlight specific patterns and extract data dynamically.
- Docker/WSL Integration: Stream logs directly from Docker containers or WSL distributions.
- Export Functionality: Export filtered logs to a new file or clipboard.
- Custom Themes: User-selectable accent colors and layout configurations.
-🚀 Getting Started
-Download the latest release from the Releases Page.
-Extract the archive.
-Run OmniFlow.exe. No .NET runtime installation required.
-📄 License
-This project is licensed under the MIT License - see the LICENSE file for details.
+    OmniFlow/
+    ├── Models/             # Value types (readonly record struct)
+    ├── Services/           # Core logic (Channels, File Watchers, Parsers)
+    ├── ViewModels/         # State & Command logic (INotifyPropertyChanged)
+    └── Views/              # XAML UI components
+
+## 🗺 Roadmap
+- [x] **Multi-File Aggregation:** Tail multiple files simultaneously.
+- [x] **Advanced Regex Search:** Highlight specific patterns and extract data dynamically.
+- [x] **Auto-Scroll & Pause:** Smart scroll tracking pauses stream when reading history.
+- [ ] **Docker/WSL Integration:** Stream logs directly from Docker containers or WSL distributions.
+- [ ] **Export Functionality:** Export filtered logs to a new file or clipboard.
+- [ ] **Custom Themes:** User-selectable accent colors and layout configurations.
+
+## 🚀 Getting Started
+1. Download the latest release from the [Releases Page](https://github.com/BestArmor/OmniFlow/releases).
+2. Extract the archive.
+3. Run `OmniFlow.exe`. No .NET runtime installation required.
+
+## 📄 License
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
 <div align="center">
-<br/>
-Made with 🔥 by <a href="https://github.com/BestArmor">BestArmor</a>
+  <br/>
+  Made with 🔥 by <a href="https://github.com/BestArmor">BestArmor</a>
 </div>
