@@ -1,5 +1,6 @@
 using System;
 using System.Buffers;
+using System.Collections.Generic;
 using System.IO;
 using System.Text;
 using System.Text.Json;
@@ -25,7 +26,7 @@ public sealed class MemoryMappedLogWatcher : ILogWatcher
         var token = _cts.Token;
 
         using var fs = new FileStream(filePath, FileMode.Open, FileAccess.Read, FileShare.ReadWrite | FileShare.Delete);
-        byte[] buffer = ArrayPool<byte>.Shared.Rent(4096);
+        byte[] buffer = ArrayPool<byte>.Shared.Rent(8192);
         int bytesInBuffer = 0;
 
         try
@@ -35,12 +36,26 @@ public sealed class MemoryMappedLogWatcher : ILogWatcher
                 int bytesRead = await fs.ReadAsync(buffer.AsMemory(bytesInBuffer), token);
                 if (bytesRead == 0)
                 {
+                    if (bytesInBuffer > 0)
+                    {
+                        var entry = ParseLogEntry(buffer.AsSpan(0, bytesInBuffer), filePath);
+                        await _channel.Writer.WriteAsync(entry, token);
+                        bytesInBuffer = 0;
+                    }
                     await Task.Delay(500, token);
                     continue;
                 }
 
                 bytesInBuffer += bytesRead;
-                ProcessBuffer(buffer, ref bytesInBuffer, filePath, token);
+                
+                // Вынесли работу со Span в синхронный метод, чтобы не было ошибок C# 12
+                var parsedEntries = ProcessBuffer(buffer, ref bytesInBuffer, filePath);
+
+                foreach (var entry in parsedEntries)
+                {
+                    // Ждем, пока канал освободится. Никаких потерь логов!
+                    await _channel.Writer.WriteAsync(entry, token);
+                }
             }
         }
         finally
@@ -49,11 +64,13 @@ public sealed class MemoryMappedLogWatcher : ILogWatcher
         }
     }
 
-    private void ProcessBuffer(byte[] buffer, ref int bytesInBuffer, string sourceFile, CancellationToken token)
+    private List<LogEntry> ProcessBuffer(byte[] buffer, ref int bytesInBuffer, string sourceFile)
     {
+        var entries = new List<LogEntry>();
+        int processedIndex = 0;
         Span<byte> span = buffer.AsSpan(0, bytesInBuffer);
         
-        while (!token.IsCancellationRequested)
+        while (true)
         {
             int newlineIndex = span.IndexOf((byte)'\n');
             if (newlineIndex < 0) break;
@@ -64,26 +81,31 @@ public sealed class MemoryMappedLogWatcher : ILogWatcher
                 lineSpan = lineSpan[..^1];
             }
 
-            var entry = ParseLogEntry(lineSpan, sourceFile);
-            _channel.Writer.TryWrite(entry);
+            entries.Add(ParseLogEntry(lineSpan, sourceFile));
 
             span = span[(newlineIndex + 1)..];
-            bytesInBuffer = span.Length;
-            span.CopyTo(buffer.AsSpan());
+            processedIndex += newlineIndex + 1;
         }
+
+        int leftover = bytesInBuffer - processedIndex;
+        if (leftover > 0 && processedIndex > 0)
+        {
+            buffer.AsSpan(processedIndex, leftover).CopyTo(buffer.AsSpan(0, leftover));
+        }
+        bytesInBuffer = leftover;
+
+        return entries;
     }
 
     private static LogEntry ParseLogEntry(ReadOnlySpan<byte> lineSpan, string sourceFile)
     {
         string fileName = Path.GetFileName(sourceFile);
 
-        // Если строка начинается с { — это JSON (Serilog/Structured log)
         if (lineSpan.Length > 0 && lineSpan[0] == (byte)'{')
         {
             return ParseJsonLog(lineSpan, fileName);
         }
 
-        // Обычный текстовый лог
         string line = Encoding.UTF8.GetString(lineSpan);
         return ParseTextLog(line, fileName);
     }
@@ -109,12 +131,11 @@ public sealed class MemoryMappedLogWatcher : ILogWatcher
                     {
                         case "@t":
                         case "timestamp":
-                          DateTime.TryParse(reader.GetString(), System.Globalization.CultureInfo.InvariantCulture, System.Globalization.DateTimeStyles.RoundtripKind, out timestamp);
+                            DateTime.TryParse(reader.GetString(), System.Globalization.CultureInfo.InvariantCulture, System.Globalization.DateTimeStyles.RoundtripKind, out timestamp);
                             break;
                         case "@l":
                         case "level":
                             string rawLevel = reader.GetString() ?? "INFO";
-                            // Маппим все возможные варианты в наши стандартные
                             level = rawLevel.ToLower() switch
                             {
                                 "error" or "err" or "fatal" or "critical" => "ERROR",
@@ -127,7 +148,6 @@ public sealed class MemoryMappedLogWatcher : ILogWatcher
                             message = reader.GetString() ?? "";
                             break;
                         default:
-                            // Безопасно читаем любые значения (строки, числа, булы) без крашей
                             string val = reader.TokenType == JsonTokenType.String 
                                 ? reader.GetString() ?? "" 
                                 : Encoding.UTF8.GetString(reader.ValueSpan);
@@ -182,6 +202,7 @@ public sealed class MemoryMappedLogWatcher : ILogWatcher
         _cts?.Cancel();
     }
 }
+
 public sealed class MemoryMappedLogWatcherFactory : ILogWatcherFactory
 {
     private readonly LogChannel _channel;

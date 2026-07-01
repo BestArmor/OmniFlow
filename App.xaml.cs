@@ -18,7 +18,6 @@ public partial class App : Application
     protected override void OnStartup(StartupEventArgs e)
     {
         base.OnStartup(e);
-        
         var mainWindow = _services.GetRequiredService<MainWindow>();
         mainWindow.DataContext = _services.GetRequiredService<MainViewModel>();
         mainWindow.Show();
@@ -27,14 +26,11 @@ public partial class App : Application
     private static IServiceProvider ConfigureServices()
     {
         var services = new ServiceCollection();
-
+        services.AddSingleton<ThemeService>();
         services.AddSingleton<LogChannel>();
         services.AddSingleton<ILogWatcherFactory, MemoryMappedLogWatcherFactory>();
-
         services.AddSingleton<MainViewModel>();
-
         services.AddSingleton<MainWindow>();
-
         return services.BuildServiceProvider();
     }
 }
