@@ -49,9 +49,9 @@ OmniFlow follows a strict Clean Architecture approach:
 - [x] **Multi-File Aggregation:** Tail multiple files simultaneously.
 - [x] **Advanced Regex Search:** Highlight specific patterns and extract data dynamically.
 - [x] **Auto-Scroll & Pause:** Smart scroll tracking pauses stream when reading history.
-- [ ] **Docker/WSL Integration:** Stream logs directly from Docker containers or WSL distributions.
-- [ ] **Export Functionality:** Export filtered logs to a new file or clipboard.
-- [ ] **Custom Themes:** User-selectable accent colors and layout configurations.
+- [x] **Docker/WSL Integration:** Stream logs directly from Docker containers or WSL distributions.
+- [x] **Export Functionality:** Export filtered logs to a new file or clipboard.
+- [x] **Custom Themes:** User-selectable accent colors and layout configurations.
 
 ## 🚀 Getting Started
 1. Download the latest release from the [Releases Page](https://github.com/BestArmor/OmniFlow/releases).
