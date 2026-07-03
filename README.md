@@ -11,6 +11,10 @@
   ![WPF](https://img.shields.io/badge/WPF-512BD4?style=for-the-badge&logo=windows&logoColor=white)
   ![License](https://img.shields.io/badge/License-MIT-EC4899?style=for-the-badge)
   
+  <br/>
+  
+  <img src="assets/OmniFlow.gif" width="90%" alt="OmniFlow Demo" />
+  
   <br/><br/>
 </div>
 
